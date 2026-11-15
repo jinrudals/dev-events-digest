@@ -1,0 +1,16 @@
+topics:
+  - name: ai
+    description: AI / ML / LLM / 생성형 AI
+    keywords: [ai, llm, 머신러닝, 딥러닝, machine learning, gpt, 생성형, genai, mlops, agent, 에이전트]
+  - name: devops
+    description: DevOps / CI/CD / SRE / 관측성
+    keywords: [devops, ci/cd, sre, observability, 관측성, terraform, gitops, github actions, jenkins, 데브옵스]
+  - name: platform-engineering
+    description: Platform Engineering / IDP / Backstage
+    keywords: [platform engineering, 플랫폼 엔지니어링, backstage, internal developer platform, idp, kubernetes, k8s, 쿠버네티스]
+  - name: cloud
+    description: 클라우드 (AWS, GCP, Azure)
+    keywords: [aws, gcp, google cloud, azure, 클라우드, cloud, serverless]
+  - name: security
+    description: 보안 / DevSecOps
+    keywords: [security, 보안, devsecops, 취약점, zero trust]
