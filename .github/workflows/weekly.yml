@@ -1,0 +1,52 @@
+name: weekly-digest
+
+on:
+  schedule:
+    - cron: "0 1 * * 1" # 월요일 10:00 KST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "메일 발송 없이 HTML만 생성"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  models: read
+
+concurrency:
+  group: weekly-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e .
+      - name: Run digest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: python -m digest ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: Upload dry-run output
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-html
+          path: out/digest.html
+      - name: Commit sent state
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/sent.json
+          git diff --cached --quiet || (git commit -m "chore: update sent events state" && git push)
