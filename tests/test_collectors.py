@@ -73,3 +73,17 @@ def test_collect_all_isolates_failure():
     events, failed = collect_all([_Boom(), _Ok()])
     assert [e.title for e in events] == ["a"]
     assert failed == ["boom"]
+
+
+def test_devevent_skips_malformed_entry_and_keeps_valid_ones():
+    raw = (
+        "## `26년 11월`\n"
+        "- __[Bad](http://bad)__\n  - 일시: 11. 31(월) 10:00\n"
+        "- __[Good](http://good)__\n  - 분류: `온라인`\n  - 일시: 11. 30(월) 10:00\n"
+    )
+    assert [e.title for e in devevent.parse(raw)] == ["Good"]
+
+
+def test_devevent_24_00_end_rolls_to_next_day():
+    raw = "## `26년 11월`\n- __[A](http://a)__\n  - 분류: `온라인`\n  - 일시: 11. 20(금) 20:00 ~ 11. 20(금) 24:00\n"
+    assert devevent.parse(raw)[0].end == datetime(2026, 11, 21, 0, 0, tzinfo=KST)

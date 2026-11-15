@@ -1,8 +1,11 @@
+import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from digest.collectors.base import http_get
 from digest.models import KST, Event
+
+log = logging.getLogger(__name__)
 
 URL = "https://raw.githubusercontent.com/brave-people/Dev-Event/master/README.md"
 
@@ -17,6 +20,8 @@ def _to_dt(m: re.Match, year: int, section_month: int) -> datetime:
     month, day = int(m.group(1)), int(m.group(2))
     y = year + 1 if month < section_month - 6 else year
     hour, minute = (int(m.group(3)), int(m.group(4))) if m.group(3) else (0, 0)
+    if (hour, minute) == (24, 0):
+        return datetime(y, month, day, tzinfo=KST) + timedelta(days=1)
     return datetime(y, month, day, hour, minute, tzinfo=KST)
 
 
@@ -52,7 +57,11 @@ def parse(raw: str) -> list[Event]:
 
     def flush():
         if current and year:
-            ev = _build(current[0], current[1], fields, year, month)
+            try:
+                ev = _build(current[0], current[1], fields, year, month)
+            except ValueError:
+                log.warning("skipping malformed Dev-Event entry: %s", current[0])
+                return
             if ev:
                 events.append(ev)
 
