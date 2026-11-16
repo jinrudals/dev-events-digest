@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>개발자 행사 주간 소식 {{ today.isoformat() }}</title></head>
+<body style="font-family:-apple-system,'Malgun Gothic',sans-serif;max-width:680px;margin:auto;color:#222">
+<h2>🗓 개발자 행사 소식 ({{ today.isoformat() }})</h2>
+{% if not sections %}
+<p>이번 주 신규 행사 없음</p>
+{% endif %}
+{% for topic, items in sections %}
+<h3 style="border-bottom:1px solid #ddd;padding-bottom:4px">{{ topic }}</h3>
+<ul>
+  {% for e in items %}
+  <li style="margin-bottom:10px">
+    <a href="{{ e.url }}"><b>{{ e.title }}</b></a><br>
+    <small>{{ e.start.strftime('%m/%d (%a) %H:%M') }} · {{ '온라인' if e.online else e.location }}</small><br>
+    {% if e.summary %}<span>{{ e.summary }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endfor %}
+{% if failed_sources %}
+<p style="color:#b00"><small>⚠ 수집 실패 소스: {{ failed_sources | join(', ') }}</small></p>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,60 @@
+name: weekly-digest
+
+on:
+  schedule:
+    - cron: "0 1 * * 1" # 월요일 10:00 KST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "발행 없이 HTML만 생성"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  models: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: weekly-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e .
+      - name: Run digest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -m digest ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: Upload dry-run output
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-html
+          path: out/digest.html
+      - uses: actions/upload-pages-artifact@v3
+        if: ${{ !inputs.dry_run }}
+        with:
+          path: site
+      - name: Deploy to GitHub Pages
+        id: deploy
+        if: ${{ !inputs.dry_run }}
+        uses: actions/deploy-pages@v4
+      - name: Commit state
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/sent.json state/history.json
+          git diff --cached --quiet || (git commit -m "chore: update digest state" && git pull --rebase && git push)
