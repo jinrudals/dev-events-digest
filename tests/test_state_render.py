@@ -3,7 +3,6 @@ from datetime import date, datetime
 
 from digest.models import KST, Event
 from digest.render import render_html
-from digest.send import send_email
 from digest.state import exclude_sent, load_sent, save_sent
 
 
@@ -48,32 +47,3 @@ def test_render_lists_failed_sources():
 def test_render_escapes_html_in_titles():
     html = render_html([ev("<script>x</script>", 3, ["ai"])], [], date(2026, 11, 16))
     assert "<script>x" not in html
-
-
-def test_send_email_builds_message(monkeypatch):
-    sent = {}
-
-    class FakeSMTP:
-        def __init__(self, host, port):
-            sent["addr"] = (host, port)
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            pass
-
-        def login(self, u, p):
-            sent["login"] = (u, p)
-
-        def send_message(self, msg):
-            sent["msg"] = msg
-
-    monkeypatch.setattr("digest.send.smtplib.SMTP_SSL", FakeSMTP)
-    for k, v in {"SMTP_HOST": "h", "SMTP_PORT": "465", "SMTP_USER": "u@x", "SMTP_PASSWORD": "pw", "MAIL_TO": "me@x"}.items():
-        monkeypatch.setenv(k, v)
-    send_email("<p>hi</p>", "제목")
-    assert sent["addr"] == ("h", 465) and sent["login"] == ("u@x", "pw")
-    msg = sent["msg"]
-    assert msg["To"] == "me@x" and msg["Subject"] == "제목"
-    assert "<p>hi</p>" in msg.get_body(("html",)).get_content()

@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -9,17 +10,19 @@ from digest.models import KST
 from digest.pipeline.classify import classify, default_llm, load_topics
 from digest.pipeline.dedupe import dedupe
 from digest.pipeline.filter import filter_events
+from digest.publish import add_week, load_history, save_history, write_site
 from digest.render import render_html
-from digest.send import send_email
 from digest.state import exclude_sent, load_sent, save_sent
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="digest")
-    ap.add_argument("--dry-run", action="store_true", help="write HTML to --out instead of sending")
+    ap.add_argument("--dry-run", action="store_true", help="write HTML to --out only; no publish or state change")
     ap.add_argument("--out", default="out/digest.html")
     ap.add_argument("--state", default="state/sent.json")
     ap.add_argument("--topics", default="topics.yaml")
+    ap.add_argument("--history", default="state/history.json")
+    ap.add_argument("--site", default="site")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO)
 
@@ -42,7 +45,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {out} ({len(events)} events)")
         return 0
 
-    send_email(html, f"[개발자 행사] {now.strftime('%Y-%m-%d')} 주간 소식 ({len(events)}건)")
+    site_url = os.environ.get("SITE_URL", "https://jinrudals.github.io/dev-events-digest").rstrip("/")
+    title = f"[개발자 행사] {now.strftime('%Y-%m-%d')} 주간 소식 ({len(events)}건)"
+    history = add_week(load_history(args.history), now.strftime("%Y-%m-%d"), title, html, len(events))
+    write_site(history, args.site, site_url)
+    save_history(history, args.history)
     save_sent(sent | {e.url for e in events}, args.state)
     return 0
 
